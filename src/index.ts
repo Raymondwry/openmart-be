@@ -1,25 +1,48 @@
 import 'dotenv/config';
-import { createClient } from '@supabase/supabase-js';
 import express from 'express';
-const cors = require('cors');
+import multer from 'multer';
+import cors from 'cors';
+import { createClient } from '@supabase/supabase-js';
 
+// Configure your Supabase client
 const supabaseUrl = process.env.SUPABASE_URL as string;
 const supabaseKey = process.env.SUPABASE_KEY as string;
-
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-const app: express.Application = express();
-const PORT: number | string = process.env.PORT || 3001;
+// Initialize Express app
+const app = express();
+const PORT = process.env.PORT || 3001;
+
+
 app.use(cors());
-app.use(express.json()); 
+app.use(express.json());
 
+// Configure Multer for image uploads
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
+});
 
-app.get('/', (req: express.Request, res: express.Response) => {
+// Endpoint to handle file uploads
+app.post('/upload', upload.single('image'), (req, res) => {
+  if (req.file) {
+    // Assuming file upload is successful and file is available in req.file
+    console.log('File uploaded successfully:', req.file);
+    res.send('File uploaded successfully');
+  } else {
+    // If the file is too large or another error occurred
+    res.status(400).send('File is too large or not provided');
+  }
+});
+
+// Endpoint to say hello
+app.get('/', (req, res) => {
   res.send('Hello World!');
 });
 
-
-app.get('/data', async (req: express.Request, res: express.Response) => {
+// Fetch data with pagination and search
+app.get('/data', async (req, res) => {
   const { page = 1, pageSize = 10, search = '' } = req.query;
 
   const { data, error, count } = await supabase
@@ -36,8 +59,8 @@ app.get('/data', async (req: express.Request, res: express.Response) => {
   }
 });
 
-
-app.post('/data', async (req: express.Request, res: express.Response) => {
+// Add data
+app.post('/data', async (req, res) => {
   const { data, error } = await supabase
     .from('openmart_be')
     .insert(req.body);
@@ -50,8 +73,8 @@ app.post('/data', async (req: express.Request, res: express.Response) => {
   }
 });
 
-
-app.put('/data/:id', async (req: express.Request, res: express.Response) => {
+// Update data
+app.put('/data/:id', async (req, res) => {
   const { id } = req.params;
   const { data, error } = await supabase
     .from('openmart_be')
@@ -66,8 +89,8 @@ app.put('/data/:id', async (req: express.Request, res: express.Response) => {
   }
 });
 
-
-app.delete('/data/:id', async (req: express.Request, res: express.Response) => {
+// Delete data
+app.delete('/data/:id', async (req, res) => {
   const { id } = req.params;
   const { data, error } = await supabase
     .from('openmart_be')
@@ -82,6 +105,7 @@ app.delete('/data/:id', async (req: express.Request, res: express.Response) => {
   }
 });
 
+// Start the server
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
